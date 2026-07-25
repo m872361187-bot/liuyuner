@@ -82,27 +82,31 @@
         .calendar-grid .day.disabled { color: #ddd; }
         .calendar-grid .day.selected { transform: scale(1.15); border: 3px solid var(--pink-dark); background: #fff; z-index: 10; box-shadow: 0 2px 12px rgba(255, 105, 180, 0.4); color: var(--pink-dark); font-weight: bold; }
 
-        /* 用户识别/登录模块 */
-        .user-container { display: flex; justify-content: center; align-items: center; padding: 10px; }
-        .user-box { background: #fff; border-radius: var(--border-radius); padding: 15px; width: 100%; max-width: 350px; text-align: center; }
-        .user-box input { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 10px; font-size: 14px; box-sizing: border-box; }
-        .user-box button { width: 100%; }
+        /* 账号密码登录模块 (全新) */
+        .login-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; background: var(--pink-light); }
+        .login-box { background: #fff; border-radius: var(--border-radius); padding: 25px; width: 100%; max-width: 350px; text-align: center; box-shadow: 0 4px 10px rgba(255, 182, 193, 0.2); }
+        .login-box input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 10px; font-size: 14px; box-sizing: border-box; }
+        .login-box button { width: 100%; margin-top: 5px; }
+        .login-box .sub-btn { background: #e91e63; margin-top: 10px; }
 
-        .data-actions { display: flex; gap: 10px; margin-top: 10px; }
-        #import-textarea { width: 100%; height: 100px; margin-top: 10px; padding: 8px; border-radius: 10px; border: 1px solid #ddd; }
         .review-controls { display: flex; gap: 10px; margin: 10px 0; }
     </style>
 </head>
 <body>
 
-<!-- 用户识别/登录模块 -->
-<div id="login-page" class="user-container">
-    <div class="user-box card">
-        <h2>🐱 云端错题本</h2>
-        <p style="font-size:14px; color:#888; margin-bottom:10px;">输入一个专属ID（建议用手机号或邮箱，别人无法访问），数据自动保存到云端！</p>
-        <input type="text" id="user-id-input" placeholder="输入您的专属ID" />
-        <button class="btn-pink" style="width:100%; margin-top:10px;" onclick="window.handleLogin()">进入我的错题本</button>
-        <div id="login-msg" style="color:red; margin-top:5px; font-size:12px;"></div>
+<!-- 邮箱账号密码登录模块 -->
+<div id="login-page" class="login-container">
+    <div class="login-box card">
+        <h2>🐱 登录错题本</h2>
+        <p style="font-size:14px; color:#888; margin-bottom:15px;">使用固定邮箱和密码登录，数据存于云端永不丢失！</p>
+        
+        <input type="email" id="login-email" placeholder="请输入邮箱账号" />
+        <input type="password" id="login-password" placeholder="请输入密码" />
+        
+        <button class="btn-pink" onclick="window.handleLogin()">登 录</button>
+        <button class="btn-pink sub-btn" onclick="window.handleRegister()">没有账号？点此注册新账号</button>
+        
+        <div id="login-msg" style="color:red; margin-top:10px; font-size:12px;"></div>
     </div>
 </div>
 
@@ -121,8 +125,12 @@
     <div id="app-container">
         <div id="tab-home" class="page-container active">
             <div class="card"><h2>📚 喵喵错题本</h2><p style="font-size: 14px; color: #888; margin: 10px 0;">根据艾宾浩斯记忆曲线，今天共 <span id="today-count" style="color:var(--pink-dark); font-weight:bold;">0</span> 道题需要复习。</p><button class="btn-pink" onclick="openModal()" style="width: 100%; padding: 12px;">➕ 添加新错题</button></div>
-            <div class="card"><h3>📍 快速分类</h3><div style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px;"><button class="option-btn" onclick="addErrorByCategory('高等数学')">高数</button><button class="option-btn" onclick="addErrorByCategory('线性代数')">线代</button><button class="option-btn" onclick="addErrorByCategory('概率论与数理统计')">概率论</button></div></div>
-            <div class="card"><h3>💾 数据存储</h3><div class="data-actions"><button class="btn-pink" onclick="exportData()">📤 导出数据</button><button class="btn-pink" onclick="document.getElementById('import-area').style.display='block'">📥 导入数据</button></div><div id="import-area" style="display:none; margin-top:10px;"><textarea id="import-textarea" placeholder="粘贴复制好的代码数据..."></textarea><button class="btn-pink" onclick="importData()" style="margin-top:5px; width:100%;">点击确认导入</button></div></div>
+            
+            <div class="card"><h3>📍 快速分类</h3><div style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px;">
+                <button class="option-btn" onclick="jumpToCategory('高等数学')">高数</button>
+                <button class="option-btn" onclick="jumpToCategory('线性代数')">线代</button>
+                <button class="option-btn" onclick="jumpToCategory('概率论与数理统计')">概率论</button>
+            </div></div>
         </div>
         <div id="tab-review" class="page-container">
             <div class="card"><h2>⏰ 今日复习 <span style="font-size:14px; font-weight:normal;">(艾宾浩斯曲线提醒)</span></h2><div class="review-controls"><button class="btn-pink" onclick="shuffleReview()">🔀 乱序复习</button><button class="btn-pink" onclick="resetReviewOrder()">🔄 恢复日期顺序</button><button class="btn-pink" onclick="loadReview()">🔄 刷新列表</button></div><div id="review-list"></div></div>
@@ -177,15 +185,20 @@
         console.error("Supabase 初始化失败:", e);
     }
     
-    let currentUserId = null;
+    // ================= 核心升级：基于账号的读写逻辑 =================
+    async function getCurrentUserId() {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        return user ? user.id : null;
+    }
     
     // 读取云端数据
     async function getData() {
-        if (!currentUserId || !supabaseClient) return { errors: [], trash: [] };
+        const userId = await getCurrentUserId();
+        if (!userId) return { errors: [], trash: [] };
         const { data, error } = await supabaseClient
             .from('user_data')
             .select('data')
-            .eq('user_id', currentUserId)
+            .eq('user_id', userId)
             .maybeSingle();
         
         if (error) {
@@ -197,11 +210,12 @@
 
     // 保存数据到云端
     async function saveData(data) {
-        if (!currentUserId || !supabaseClient) throw new Error('未识别用户，或云端连接失败！');
+        const userId = await getCurrentUserId();
+        if (!userId) throw new Error('未登录，无法保存！');
         const { error } = await supabaseClient
             .from('user_data')
             .upsert({ 
-                user_id: currentUserId, 
+                user_id: userId, 
                 data: data,
                 updated_at: new Date()
             }, { onConflict: 'user_id' });
@@ -220,27 +234,68 @@
     let viewerImages = []; 
     let viewerIndex = 0;
 
-    // ================= 账号登录逻辑 =================
-    window.handleLogin = function() {
+    // ================= 账号登录/注册/退出逻辑 =================
+    window.handleLogin = async function() {
         if (!supabaseClient) {
-            document.getElementById('login-msg').innerText='⚠️ 云端连接失败！请检查浏览器的防追踪设置，或切换到无痕模式重试。';
+            document.getElementById('login-msg').innerText='⚠️ 云端连接失败！请检查网络。';
             return;
         }
-        const inputId = document.getElementById('user-id-input').value.trim();
-        if (!inputId) return document.getElementById('login-msg').innerText='请输入您的专属ID';
-        document.getElementById('login-msg').innerText='正在连接云端...';
+        const email = document.getElementById('login-email').value.trim();
+        const password = document.getElementById('login-password').value.trim();
+        if (!email || !password) return document.getElementById('login-msg').innerText='请输入邮箱和密码！';
         
-        currentUserId = inputId;
+        document.getElementById('login-msg').innerText='正在登录...';
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) {
+            document.getElementById('login-msg').innerText='登录失败：' + error.message;
+        } else {
+            document.getElementById('login-msg').innerText='';
+            showAppPage(data.user.email);
+        }
+    }
+
+    window.handleRegister = async function() {
+        if (!supabaseClient) {
+            document.getElementById('login-msg').innerText='⚠️ 云端连接失败！请检查网络。';
+            return;
+        }
+        const email = document.getElementById('login-email').value.trim();
+        const password = document.getElementById('login-password').value.trim();
+        if (!email || !password) return document.getElementById('login-msg').innerText='请输入邮箱和密码！';
+        if (password.length < 6) return document.getElementById('login-msg').innerText='密码长度至少需要 6 位！';
+        
+        document.getElementById('login-msg').innerText='正在注册新账号...';
+        const { data, error } = await supabaseClient.auth.signUp({ email, password });
+        if (error) {
+            document.getElementById('login-msg').innerText='注册失败：' + error.message;
+        } else {
+            document.getElementById('login-msg').innerText='注册成功，自动登录中...';
+            window.handleLogin(); // 注册成功自动触发登录
+        }
+    }
+
+    window.handleLogout = async function() {
+        await supabaseClient.auth.signOut();
+        location.reload();
+    }
+
+    // 展示主应用界面的函数
+    function showAppPage(userEmail) {
         document.getElementById('login-page').style.display='none';
         document.getElementById('app-page').style.display='block';
-        document.getElementById('user-info').innerHTML = `👋 ${currentUserId} <span style="cursor:pointer; color:red; margin-left:10px;" onclick="window.handleLogout()">退出</span>`;
-        
+        document.getElementById('user-info').innerHTML = `👋 ${userEmail} <span style="cursor:pointer; color:red; margin-left:10px;" onclick="window.handleLogout()">退出</span>`;
         refreshAllTabs();
     }
 
-    window.handleLogout = function() {
-        currentUserId = null;
-        location.reload();
+    // 监听账号登录状态变化
+    if (supabaseClient) {
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' && session) {
+                showAppPage(session.user.email);
+            } else if (event === 'SIGNED_OUT') {
+                // 如果用户已经登出，不需要特别操作，刷新后会自动退回登录页面
+            }
+        });
     }
 
     function updateErrorTypes() {
@@ -409,9 +464,7 @@
         document.getElementById('addModal').style.display = 'flex';
     }
 
-    // ================= 终于找到手机点不开的根源了！修复完成！ =================
-    // 1. 把方法挂载到 window，保证在手机上能全局找到
-    // 2. 使用 encodeURIComponent/decodeURIComponent 解决特殊字符导致 HTML 解析失效的问题！
+    // ================= 图片查看器 =================
     window.openImageViewer = function(images, index = 0) {
         try {
             if (!images || images.length === 0) {
@@ -482,6 +535,15 @@
         }
     });
 
+    function jumpToCategory(cat) {
+        switchTab('tab-errors');
+        const filterSelect = document.getElementById('error-filter-cat');
+        if (filterSelect) {
+            filterSelect.value = cat;
+        }
+        loadErrors();
+    }
+
     function switchTab(tabId) {
         document.querySelectorAll('.page-container').forEach(el => el.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
@@ -538,7 +600,6 @@
                         <span style="font-size:12px; color:#777; display:block;">📘 ${item.workbook || '无练习册'} ${item.page ? '| 📄 '+item.page : ''}</span>
                         <div style="margin-top:5px; display:flex; gap:5px; flex-wrap:wrap;">
                             ${(item.images || []).map((img, i) => {
-                                // ★★★ 终极修复：使用 encodeURIComponent 防止手机解析 HTML 时发生冲突 ★★★
                                 const encodedImages = encodeURIComponent(JSON.stringify(item.images));
                                 return `<img src="${img}" style="width:50px; height:50px; object-fit:cover; border-radius:5px; cursor:pointer; touch-action:manipulation;" data-images='${encodedImages}' data-index="${i}" onclick="window.openImageViewer(JSON.parse(decodeURIComponent(this.dataset.images)), parseInt(this.dataset.index))" />`;
                             }).join('')}
@@ -691,31 +752,6 @@
         container.innerHTML = data.trash.map(item => `
             <div class="error-item"><div class="info"><h4>${item.subjectId || '已删除错题'}</h4><span>分类：${item.knowledgePoint} - ${item.errorType || '未分类'}</span></div><div><button class="btn-pink" onclick="restoreFromTrash('${item.id}')">恢复</button></div></div>
         `).join('');
-    }
-
-    async function exportData() {
-        const data = await getData();
-        const jsonStr = JSON.stringify(data);
-        try {
-            await navigator.clipboard.writeText(jsonStr);
-            alert('数据已复制到剪贴板！\n请妥善保存这段代码。\n（若提示太长无法复制，请按Ctrl+C手动复制）');
-        } catch (e) {
-            alert('由于数据量过大，自动复制失败。请在下方选择全部文字并复制：\n' + jsonStr);
-        }
-    }
-
-    async function importData() {
-        const code = document.getElementById('import-textarea').value;
-        if(!code) return alert('请先粘贴数据代码！');
-        try {
-            const data = JSON.parse(code);
-            await saveData(data);
-            document.getElementById('import-area').style.display = 'none';
-            await refreshAllTabs();
-            alert('数据导入成功！');
-        } catch (e) {
-            alert('导入失败：数据格式错误，请检查代码完整性。');
-        }
     }
 
     function openModal() {
