@@ -6,7 +6,6 @@
     <title>喵喵错题本 (Supabase云端版)</title>
     <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
     
-    <!-- 引入 Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
@@ -164,14 +163,11 @@
 </div>
 
 <script>
-    // ================= 核心升级：Supabase 云端存储层 (防冲突、防屏蔽) =================
+    // ================= 核心升级：Supabase 云端存储层 =================
     let supabaseClient = null;
-    
-    // 在加载时尝试初始化，如果浏览器屏蔽了库，会抛出错误
     try {
         const supabaseUrl = 'https://vlbisjkcnnnzyklpgmef.supabase.co'; 
         const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsYmlzamtjbm5uenlrbHBnbWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5ODExNzMsImV4cCI6MjEwMDU1NzE3M30.NUul0dYCgplZCMp8kaZff4z30JGmuCeip4-XjzDcRxg';
-        // 判断 supabase 对象是否存在
         if (typeof supabase !== 'undefined') {
             supabaseClient = supabase.createClient(supabaseUrl, supabaseAnonKey);
         } else {
@@ -181,7 +177,7 @@
         console.error("Supabase 初始化失败:", e);
     }
     
-    let currentUserId = null; // 记录当前登录的用户专属ID
+    let currentUserId = null;
     
     // 读取云端数据
     async function getData() {
@@ -212,7 +208,6 @@
             
         if (error) throw error;
     }
-    // =============================================================
 
     const knowledgeTypeMap = {
         '高等数学': ['函数极限与连续', '导数与微分', '微分中值定理', '不定积分与定积分', '定积分的应用', '多元函数微分学', '重积分', '曲线曲面积分', '无穷级数', '微分方程'],
@@ -225,7 +220,7 @@
     let viewerImages = []; 
     let viewerIndex = 0;
 
-    // ================= 账号登录逻辑 (使用 window 挂载防止未定义) =================
+    // ================= 账号登录逻辑 =================
     window.handleLogin = function() {
         if (!supabaseClient) {
             document.getElementById('login-msg').innerText='⚠️ 云端连接失败！请检查浏览器的防追踪设置，或切换到无痕模式重试。';
@@ -414,30 +409,51 @@
         document.getElementById('addModal').style.display = 'flex';
     }
 
-    function openImageViewer(images, index = 0) {
+    // ================= 终于找到手机点不开的根源了！修复完成！ =================
+    // 1. 把方法挂载到 window，保证在手机上能全局找到
+    // 2. 使用 encodeURIComponent/decodeURIComponent 解决特殊字符导致 HTML 解析失效的问题！
+    window.openImageViewer = function(images, index = 0) {
         try {
-            if (!images || images.length === 0) return;
+            if (!images || images.length === 0) {
+                alert("这张错题底下似乎没有有效的图片文件。您可以点击编辑，重新上传一次图片。");
+                return;
+            }
             viewerImages = images;
             viewerIndex = index % images.length;
             const img = document.getElementById('viewerImg');
+            const indexDisplay = document.getElementById('imgIndex');
+            
             img.src = images[viewerIndex];
-            img.className = ''; img.style.transform = "scale(1)";
-            document.getElementById('imgIndex').innerText = `${viewerIndex + 1} / ${viewerImages.length}`;
+            img.style.transform = 'scale(1)';
+            img.className = '';
+            
+            if(indexDisplay) indexDisplay.innerText = `${viewerIndex + 1} / ${viewerImages.length}`;
             document.getElementById('imageViewer').style.display = 'flex';
         } catch (error) {
-            alert("打开图片发生了未知错误。" + error.message);
+            alert("打开图片发生了未知错误，可能是图片数据损坏：\n" + error.message);
         }
     }
 
     function closeImageViewer() { document.getElementById('imageViewer').style.display = 'none'; }
+    
     function changeImage(delta) {
         viewerIndex = (viewerIndex + delta + viewerImages.length) % viewerImages.length;
         const img = document.getElementById('viewerImg');
         img.src = viewerImages[viewerIndex];
-        img.className = ''; img.style.transform = "scale(1)";
+        img.style.transform = 'scale(1)';
+        img.className = '';
         document.getElementById('imgIndex').innerText = `${viewerIndex + 1} / ${viewerImages.length}`;
     }
-    function toggleZoom() { document.getElementById('viewerImg').classList.toggle('zoomed'); }
+
+    function toggleZoom() {
+        const img = document.getElementById('viewerImg');
+        if (!img) return;
+        if (img.style.transform === 'scale(2)') {
+            img.style.transform = 'scale(1)';
+        } else {
+            img.style.transform = 'scale(2)';
+        }
+    }
 
     document.addEventListener('DOMContentLoaded', () => {
         const imgWrapper = document.getElementById('imgWrapper');
@@ -445,8 +461,13 @@
             imgWrapper.addEventListener('wheel', (e) => {
                 e.preventDefault();
                 const img = document.getElementById('viewerImg');
-                if (e.deltaY < 0) { img.style.transform = "scale(2)"; img.style.cursor = "zoom-out"; } 
-                else { img.style.transform = "scale(1)"; img.style.cursor = "zoom-in"; }
+                if (e.deltaY < 0) {
+                    img.style.transform = "scale(2)";
+                    img.style.cursor = "zoom-out";
+                } else {
+                    img.style.transform = "scale(1)";
+                    img.style.cursor = "zoom-in";
+                }
             }, { passive: false });
         }
         const viewerEl = document.getElementById('imageViewer');
@@ -516,13 +537,17 @@
                         <span style="font-size:12px; color:#e91e63; display:block;">📌 错题类型: ${item.errorType || '未分类'}</span>
                         <span style="font-size:12px; color:#777; display:block;">📘 ${item.workbook || '无练习册'} ${item.page ? '| 📄 '+item.page : ''}</span>
                         <div style="margin-top:5px; display:flex; gap:5px; flex-wrap:wrap;">
-                            ${(item.images || []).map((img, i) => `<img src="${img}" style="width:50px; height:50px; object-fit:cover; border-radius:5px; cursor:pointer;" onclick="openImageViewer(item.images, ${i})" />`).join('')}
+                            ${(item.images || []).map((img, i) => {
+                                // ★★★ 终极修复：使用 encodeURIComponent 防止手机解析 HTML 时发生冲突 ★★★
+                                const encodedImages = encodeURIComponent(JSON.stringify(item.images));
+                                return `<img src="${img}" style="width:50px; height:50px; object-fit:cover; border-radius:5px; cursor:pointer; touch-action:manipulation;" data-images='${encodedImages}' data-index="${i}" onclick="window.openImageViewer(JSON.parse(decodeURIComponent(this.dataset.images)), parseInt(this.dataset.index))" />`;
+                            }).join('')}
                         </div>
                         <div class="answer-section" style="margin-top:5px; background:#f9f9f9; padding:8px; border-radius:5px;">
                             <div class="answer-toggle" style="color:#888; font-size:12px; cursor:pointer;" onclick="this.style.display='none'; this.nextElementSibling.style.display='block';">点击查看答案 👇</div>
                             <div class="answer-content" style="display:none; cursor:pointer;" onclick="this.style.display='none'; this.previousElementSibling.style.display='block';">
                                 <div style="margin-bottom:5px; white-space:pre-wrap;">${item.answerText || '暂无文字答案'}</div>
-                                ${(item.answerImages || []).map((img, i) => `<img src="${img}" style="max-width:100%; height:auto; border-radius:5px; margin-top:5px; cursor:pointer;" onclick="event.stopPropagation(); openImageViewer(item.answerImages, ${i})" />`).join('')}
+                                ${(item.answerImages || []).map((img, i) => `<img src="${img}" style="max-width:100%; height:auto; border-radius:5px; margin-top:5px; cursor:pointer;" onclick="event.stopPropagation(); window.openImageViewer(JSON.parse(decodeURIComponent(this.dataset.images)), parseInt(this.dataset.index))" data-images='${encodeURIComponent(JSON.stringify(item.answerImages))}' data-index="${i}" />`).join('')}
                                 <div style="font-size:12px; color:#999; margin-top:5px; text-align:center;">点击此处收起答案</div>
                             </div>
                         </div>
@@ -555,13 +580,16 @@
                 <div style="font-size:12px; color:#e91e63; display:block; margin-bottom:5px;">📌 类型: ${item.errorType || '未分类'}</div>
                 <div style="font-size:12px; color:#777; margin-bottom:5px;">📘 ${item.workbook || '无练习册'} ${item.page ? '📄 '+item.page : ''}</div>
                 <div style="display:flex; gap:5px; flex-wrap:wrap; margin:5px 0;">
-                    ${(item.images || []).map((img, i) => `<img src="${img}" style="width:60px; height:60px; object-fit:cover; border-radius:5px; cursor:pointer;" onclick="openImageViewer(item.images, ${i})" />`).join('')}
+                    ${(item.images || []).map((img, i) => {
+                        const encodedImages = encodeURIComponent(JSON.stringify(item.images));
+                        return `<img src="${img}" style="width:60px; height:60px; object-fit:cover; border-radius:5px; cursor:pointer; touch-action:manipulation;" data-images='${encodedImages}' data-index="${i}" onclick="window.openImageViewer(JSON.parse(decodeURIComponent(this.dataset.images)), parseInt(this.dataset.index))" />`;
+                    }).join('')}
                 </div>
                 <div class="answer-section" style="margin:10px 0; background:#fce4ec; padding:8px; border-radius:5px;">
                     <div class="ans-toggle" style="color:#888; font-size:12px; cursor:pointer;" onclick="this.style.display='none'; this.nextElementSibling.style.display='block';">点击显示答案</div>
                     <div class="ans-content" style="display:none; cursor:pointer;" onclick="this.style.display='none'; this.previousElementSibling.style.display='block';">
                         <div style="white-space:pre-wrap; margin-bottom:5px;">${item.answerText || '暂无文字解析'}</div>
-                        ${(item.answerImages || []).map((img, i) => `<img src="${img}" style="max-width:100%; height:auto; border-radius:5px; margin-top:5px; cursor:pointer;" onclick="event.stopPropagation(); openImageViewer(item.answerImages, ${i})" />`).join('')}
+                        ${(item.answerImages || []).map((img, i) => `<img src="${img}" style="max-width:100%; height:auto; border-radius:5px; margin-top:5px; cursor:pointer;" onclick="event.stopPropagation(); window.openImageViewer(JSON.parse(decodeURIComponent(this.dataset.images)), parseInt(this.dataset.index))" data-images='${encodeURIComponent(JSON.stringify(item.answerImages))}' data-index="${i}" />`).join('')}
                         <div style="font-size:12px; color:#999; margin-top:5px; text-align:center;">点击此处收起答案</div>
                     </div>
                 </div>
@@ -596,13 +624,16 @@
                 <div style="font-size:12px; color:#e91e63; display:block; margin-bottom:5px;">📌 类型: ${item.errorType || '未分类'}</div>
                 <div style="font-size:12px; color:#777; margin-bottom:5px;">📘 ${item.workbook || '无练习册'} ${item.page ? '📄 '+item.page : ''}</div>
                 <div style="display:flex; gap:5px; flex-wrap:wrap; margin:5px 0;">
-                    ${(item.images || []).map((img, i) => `<img src="${img}" style="width:60px; height:60px; object-fit:cover; border-radius:5px; cursor:pointer;" onclick="openImageViewer(item.images, ${i})" />`).join('')}
+                    ${(item.images || []).map((img, i) => {
+                        const encodedImages = encodeURIComponent(JSON.stringify(item.images));
+                        return `<img src="${img}" style="width:60px; height:60px; object-fit:cover; border-radius:5px; cursor:pointer; touch-action:manipulation;" data-images='${encodedImages}' data-index="${i}" onclick="window.openImageViewer(JSON.parse(decodeURIComponent(this.dataset.images)), parseInt(this.dataset.index))" />`;
+                    }).join('')}
                 </div>
                 <div class="answer-section" style="margin:10px 0; background:#fce4ec; padding:8px; border-radius:5px;">
                     <div class="ans-toggle" style="color:#888; font-size:12px; cursor:pointer;" onclick="this.style.display='none'; this.nextElementSibling.style.display='block';">点击显示答案</div>
                     <div class="ans-content" style="display:none; cursor:pointer;" onclick="this.style.display='none'; this.previousElementSibling.style.display='block';">
                         <div style="white-space:pre-wrap; margin-bottom:5px;">${item.answerText || '暂无文字解析'}</div>
-                        ${(item.answerImages || []).map((img, i) => `<img src="${img}" style="max-width:100%; height:auto; border-radius:5px; margin-top:5px; cursor:pointer;" onclick="event.stopPropagation(); openImageViewer(item.answerImages, ${i})" />`).join('')}
+                        ${(item.answerImages || []).map((img, i) => `<img src="${img}" style="max-width:100%; height:auto; border-radius:5px; margin-top:5px; cursor:pointer;" onclick="event.stopPropagation(); window.openImageViewer(JSON.parse(decodeURIComponent(this.dataset.images)), parseInt(this.dataset.index))" data-images='${encodeURIComponent(JSON.stringify(item.answerImages))}' data-index="${i}" />`).join('')}
                         <div style="font-size:12px; color:#999; margin-top:5px; text-align:center;">点击此处收起答案</div>
                     </div>
                 </div>
