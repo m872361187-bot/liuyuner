@@ -6,7 +6,7 @@
     <title>喵喵错题本 (Supabase云端版)</title>
     <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
     
-    <!-- 引入 Supabase SDK (云端连接器) -->
+    <!-- 引入 Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
@@ -20,7 +20,6 @@
         }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'ZCOOL KuaiLe', sans-serif; }
         body { background-color: var(--pink-light); color: var(--pink-text); padding-bottom: var(--nav-height); position: relative; min-height: 100vh; overflow-x: hidden; }
-        
         .page-container { display: none; padding: 20px; padding-bottom: 20px; animation: fadeIn 0.3s ease; }
         .page-container.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -84,7 +83,7 @@
         .calendar-grid .day.disabled { color: #ddd; }
         .calendar-grid .day.selected { transform: scale(1.15); border: 3px solid var(--pink-dark); background: #fff; z-index: 10; box-shadow: 0 2px 12px rgba(255, 105, 180, 0.4); color: var(--pink-dark); font-weight: bold; }
 
-        /* 用户识别/登录模块 (改成任意 ID 即可在云端独立保存) */
+        /* 用户识别/登录模块 */
         .user-container { display: flex; justify-content: center; align-items: center; padding: 10px; }
         .user-box { background: #fff; border-radius: var(--border-radius); padding: 15px; width: 100%; max-width: 350px; text-align: center; }
         .user-box input { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 10px; font-size: 14px; box-sizing: border-box; }
@@ -103,14 +102,14 @@
         <h2>🐱 云端错题本</h2>
         <p style="font-size:14px; color:#888; margin-bottom:10px;">输入一个专属ID（建议用手机号或邮箱，别人无法访问），数据自动保存到云端！</p>
         <input type="text" id="user-id-input" placeholder="输入您的专属ID" />
-        <button class="btn-pink" style="width:100%; margin-top:10px;" onclick="handleLogin()">进入我的错题本</button>
+        <button class="btn-pink" style="width:100%; margin-top:10px;" onclick="window.handleLogin()">进入我的错题本</button>
         <div id="login-msg" style="color:red; margin-top:5px; font-size:12px;"></div>
     </div>
 </div>
 
 <!-- 主应用页面 -->
 <div id="app-page" style="display:none;">
-    <div id="user-info" style="position:absolute; top:10px; right:10px; font-size:12px; background:rgba(255,255,255,0.8); padding:5px 15px; border-radius:15px; z-index:50; cursor:pointer;" onclick="handleLogout()">👋 退出</div>
+    <div id="user-info" style="position:absolute; top:10px; right:10px; font-size:12px; background:rgba(255,255,255,0.8); padding:5px 15px; border-radius:15px; z-index:50; cursor:pointer;" onclick="window.handleLogout()">👋 退出</div>
     
     <div class="bottom-nav" id="bottomNav">
         <div class="nav-item active" onclick="switchTab('tab-home')"><span class="nav-icon">🐱</span><span>喵主页</span></div>
@@ -165,18 +164,29 @@
 </div>
 
 <script>
-    // ================= 核心升级：Supabase 云端存储层 =================
-    // ✅ 您的密钥已替换
-    const supabaseUrl = 'https://vlbisjkcnnnzyklpgmef.supabase.co'; 
-    const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsYmlzamtjbm5uenlrbHBnbWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5ODExNzMsImV4cCI6MjEwMDU1NzE3M30.NUul0dYCgplZCMp8kaZff4z30JGmuCeip4-XjzDcRxg';
-    const supabase = supabase.createClient(supabaseUrl, supabaseAnonKey);
+    // ================= 核心升级：Supabase 云端存储层 (防冲突、防屏蔽) =================
+    let supabaseClient = null;
+    
+    // 在加载时尝试初始化，如果浏览器屏蔽了库，会抛出错误
+    try {
+        const supabaseUrl = 'https://vlbisjkcnnnzyklpgmef.supabase.co'; 
+        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsYmlzamtjbm5uenlrbHBnbWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5ODExNzMsImV4cCI6MjEwMDU1NzE3M30.NUul0dYCgplZCMp8kaZff4z30JGmuCeip4-XjzDcRxg';
+        // 判断 supabase 对象是否存在
+        if (typeof supabase !== 'undefined') {
+            supabaseClient = supabase.createClient(supabaseUrl, supabaseAnonKey);
+        } else {
+            console.warn("⚠️ Supabase 连接库被浏览器拦截，请检查您的浏览器是否开启了强力防追踪模式！");
+        }
+    } catch (e) {
+        console.error("Supabase 初始化失败:", e);
+    }
     
     let currentUserId = null; // 记录当前登录的用户专属ID
     
     // 读取云端数据
     async function getData() {
-        if (!currentUserId) return { errors: [], trash: [] };
-        const { data, error } = await supabase
+        if (!currentUserId || !supabaseClient) return { errors: [], trash: [] };
+        const { data, error } = await supabaseClient
             .from('user_data')
             .select('data')
             .eq('user_id', currentUserId)
@@ -191,8 +201,8 @@
 
     // 保存数据到云端
     async function saveData(data) {
-        if (!currentUserId) throw new Error('未识别用户，无法保存！');
-        const { error } = await supabase
+        if (!currentUserId || !supabaseClient) throw new Error('未识别用户，或云端连接失败！');
+        const { error } = await supabaseClient
             .from('user_data')
             .upsert({ 
                 user_id: currentUserId, 
@@ -215,8 +225,12 @@
     let viewerImages = []; 
     let viewerIndex = 0;
 
-    // ================= 账号登录逻辑 =================
-    function handleLogin() {
+    // ================= 账号登录逻辑 (使用 window 挂载防止未定义) =================
+    window.handleLogin = function() {
+        if (!supabaseClient) {
+            document.getElementById('login-msg').innerText='⚠️ 云端连接失败！请检查浏览器的防追踪设置，或切换到无痕模式重试。';
+            return;
+        }
         const inputId = document.getElementById('user-id-input').value.trim();
         if (!inputId) return document.getElementById('login-msg').innerText='请输入您的专属ID';
         document.getElementById('login-msg').innerText='正在连接云端...';
@@ -224,16 +238,15 @@
         currentUserId = inputId;
         document.getElementById('login-page').style.display='none';
         document.getElementById('app-page').style.display='block';
-        document.getElementById('user-info').innerHTML = `👋 ${currentUserId} <span style="cursor:pointer; color:red; margin-left:10px;" onclick="handleLogout()">退出</span>`;
+        document.getElementById('user-info').innerHTML = `👋 ${currentUserId} <span style="cursor:pointer; color:red; margin-left:10px;" onclick="window.handleLogout()">退出</span>`;
         
         refreshAllTabs();
     }
 
-    function handleLogout() {
+    window.handleLogout = function() {
         currentUserId = null;
         location.reload();
     }
-    // =============================================================
 
     function updateErrorTypes() {
         const mainCat = document.getElementById('knowledge-point').value;
